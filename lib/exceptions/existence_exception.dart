@@ -4,10 +4,3 @@ class ExistenceException implements Exception {
 
   String get exception => exceptionValue;
 }
-
-class AuthFailed implements Exception {
-  final String exceptionValue;
-  AuthFailed({required this.exceptionValue}) : super();
-
-  String get exception => exceptionValue;
-}
