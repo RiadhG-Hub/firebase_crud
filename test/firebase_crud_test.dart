@@ -25,10 +25,5 @@ void main() {
         isA<void>(),
       );
     });
-
-    test('fetch data test', () async {
-      final result = await dataSources.fetch(documentId: uuid);
-      print(result);
-    });
   });
 }

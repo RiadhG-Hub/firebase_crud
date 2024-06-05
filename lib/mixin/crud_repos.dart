@@ -52,16 +52,16 @@ mixin CrudRepos {
   }
 
   @useResult
-  Future<dynamic> fetch({String? documentId}) async {
+  Future<Map<String, dynamic>> fetch({String? documentId}) async {
     final now = DateTime.now();
 
     "⌛ fetching in progress".log();
     try {
       DocumentSnapshot result = id == null ? await docById : await _instructionCollection().doc(documentId).get();
-      print(result.id);
+
       if (result.exists) {
         //return data
-        return object.fromJson(result.data() as Map<String, dynamic>);
+        return result.data() as Map<String, dynamic>;
       } else {
         throw ExistenceException(exceptionValue: '${object.runtimeType} not exist yet');
       }
@@ -156,14 +156,14 @@ mixin CrudRepos {
   }
 
   @useResult
-  Future<List> fetchAll() async {
+  Future<List<Map<String, dynamic>>> fetchAll() async {
     final now = DateTime.now();
     "⌛ fetching in progress".log();
     try {
       final collectionValue = await _instructionCollection().get();
       final List<QueryDocumentSnapshot<Object?>> docs = collectionValue.docs;
       docs.first.data()?.log();
-      final List<dynamic> result = docs.map((e) => object.fromJson(e.data() as Map<String, dynamic>)).toList();
+      final List<Map<String, dynamic>> result = docs.map((e) => e.data() as Map<String, dynamic>).toList();
       return result;
     } on ExistenceException catch (e) {
       '🟡 ${object.runtimeType} with id: $id is not exist'.log();
