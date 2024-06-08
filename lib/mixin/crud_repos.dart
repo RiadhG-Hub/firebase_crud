@@ -52,7 +52,7 @@ mixin CrudRepos {
   }
 
   @useResult
-  Future<Map<String, dynamic>> fetch({String? documentId}) async {
+  Future<dynamic> fetch({String? documentId}) async {
     final now = DateTime.now();
 
     "⌛ fetching in progress".log();
@@ -156,7 +156,7 @@ mixin CrudRepos {
   }
 
   @useResult
-  Future<List<Map<String, dynamic>>> fetchAll() async {
+  Future<List<dynamic>> fetchAll() async {
     final now = DateTime.now();
     "⌛ fetching in progress".log();
     try {
