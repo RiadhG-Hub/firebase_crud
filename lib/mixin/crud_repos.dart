@@ -1,7 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_crud/extensions/collection.dart';
 import 'package:firebase_crud/mixin/log.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:meta/meta.dart';
 
 /// A mixin providing CRUD operations for a Firestore collection.
@@ -134,9 +133,9 @@ mixin CrudRepos {
   /// Otherwise, logs the error type and data.
   void _handleError(Exception e, String methodName, Map<String, dynamic> data) {
     if (e is FirebaseException) {
-      "🔴 ${e.plugin.toUpperCase()} Message: ${e.message} Code: ${e.code}".log();
+      print("🔴 ${e.plugin.toUpperCase()} Message: ${e.message} Code: ${e.code}");
     } else {
-      '🔴 Error in $methodName with data $data: $e (type ${e.runtimeType})'.log();
+      print('🔴 Error in $methodName with data $data: $e (type ${e.runtimeType})');
     }
     throw e;
   }
@@ -146,9 +145,9 @@ mixin CrudRepos {
   /// Logs the duration of the operation in milliseconds.
   void _logCompletionTime(DateTime startTime, String operation) {
     final duration = DateTime.now().difference(startTime).inMilliseconds;
-    '$operation command finished in $duration ms'.log();
+    print('$operation command finished in $duration ms');
     if (forTesting) {
-      debugPrint('$operation command finished in $duration ms');
+      print('$operation command finished in $duration ms');
     }
   }
 }
