@@ -15,26 +15,26 @@ mixin CrudRepos {
   //short cast of doc
   Future<DocumentSnapshot<Object?>> get docById => _instructionCollection().doc(id).get();
 
-  Future<void> add() async {
+  Future<void> add({Map<String, dynamic>? data}) async {
     final now = DateTime.now();
-    "⌛ adding of ${object.runtimeType} with id equal to ${object.id} in progress".log();
+    "⌛ adding of ${object.runtimeType}  in progress".log();
     try {
       DocumentSnapshot result = await docById;
 
       ///find out whether exist
       if (result.exists) {
-        await result.reference.update(object.toJson());
-        '✅ ${object.runtimeType} with id: ${object.id} was added successfully '.log();
+        await result.reference.update(data ?? object.toJson());
+        '✅ ${object.runtimeType}  was added successfully '.log();
       } else {
         //add data
 
-        await result.reference.set(object.toJson(), SetOptions(merge: true));
+        await result.reference.set(data ?? object.toJson(), SetOptions(merge: true));
 
-        '✅ ${object.runtimeType} with id: ${object.id} was added successfully '.log();
+        '✅ ${object.runtimeType}  was added successfully '.log();
       }
     } on ExistenceException {
       'no command executed'.log();
-      '🟡 ${object.runtimeType} with id equal to ${object.id} is already exist'.log();
+      '🟡 ${object.runtimeType}  is already exist'.log();
       rethrow;
     } on FirebaseException catch (e) {
       "🔴 ${e.plugin.toUpperCase()} Message: ${e.message} code: ${e.code}".log();
@@ -67,13 +67,13 @@ mixin CrudRepos {
       }
     } on ExistenceException catch (e) {
       print(e);
-      '🟡 ${object.runtimeType} with id: $id is not exist'.log();
+      '🟡 ${object.runtimeType}  is not exist'.log();
       rethrow;
     } on FirebaseException catch (e) {
       "🔴 ${e.plugin.toUpperCase()} Message: ${e.message} code: ${e.code}".log();
       throw e.message!;
     } catch (e) {
-      '🔴 error in: lib/model/repos/crud_repos.dart with: $e type${e.runtimeType} when trying to fetch ${object.runtimeType} with id:$id'
+      '🔴 error in: lib/model/repos/crud_repos.dart with: $e type${e.runtimeType} when trying to fetch ${object.runtimeType} '
           .log();
       throw e.toString();
     } finally {
@@ -83,7 +83,7 @@ mixin CrudRepos {
 
   Future<void> delete() async {
     final now = DateTime.now();
-    "⌛ deleting of ${object.runtimeType} with id equal to ${object.id} in progress".log();
+    "⌛ deleting of ${object.runtimeType}  in progress".log();
     try {
       DocumentSnapshot result = await docById;
 
@@ -91,12 +91,12 @@ mixin CrudRepos {
       if (result.exists) {
         //delete data
         await result.reference.delete();
-        '✅ ${object.runtimeType} with ${object.id} was deleted successfully '.log();
+        '✅ ${object.runtimeType}  was deleted successfully '.log();
       } else {
         throw ExistenceException(exceptionValue: '${object.runtimeType} not exist');
       }
     } on ExistenceException catch (e) {
-      '🟡 ${object.runtimeType} with id: ${object.id} is not exist'.log();
+      '🟡 ${object.runtimeType}  is not exist'.log();
       throw Exception(e.exception);
     } on FirebaseException catch (e) {
       "🔴 ${e.plugin.toUpperCase()} Message: ${e.message} code: ${e.code}".log();
@@ -112,19 +112,19 @@ mixin CrudRepos {
 
   Future<void> updateData() async {
     final now = DateTime.now();
-    "⌛ updating of ${object.runtimeType} with id equal to ${object.id} in progress".log();
+    "⌛ updating of ${object.runtimeType}  in progress".log();
     try {
       DocumentSnapshot result = await docById;
 
       if (result.exists) {
         //update data
         await result.reference.update(object.toMap);
-        '✅ ${object.runtimeType} with ${object.id} was updated successfully'.log();
+        '✅ ${object.runtimeType}  was updated successfully'.log();
       } else {
         throw Exception('${object.runtimeType} not exist');
       }
     } on ExistenceException catch (e) {
-      '🟡 ${object.runtimeType} with id: ${object.id} is not exist'.log();
+      '🟡 ${object.runtimeType}  is not exist'.log();
       throw Exception(e.exception);
     } on FirebaseException catch (e) {
       "🔴  ${e.plugin.toUpperCase()} Message: ${e.message} code: ${e.code}".log();
@@ -143,7 +143,7 @@ mixin CrudRepos {
       DocumentSnapshot result = await docById;
 
       final exist = result.exists;
-      '✅ ${object.runtimeType} with id: $id is $exist '.log();
+      '✅ ${object.runtimeType}  is $exist '.log();
       return exist;
     } on FirebaseException catch (e) {
       "🔴 ${e.plugin.toUpperCase()} Message: ${e.message} code: ${e.code}".log();
@@ -166,14 +166,13 @@ mixin CrudRepos {
       final List<Map<String, dynamic>> result = docs.map((e) => e.data() as Map<String, dynamic>).toList();
       return result;
     } on ExistenceException catch (e) {
-      '🟡 ${object.runtimeType} with id: $id is not exist'.log();
+      '🟡 ${object.runtimeType}  is not exist'.log();
       throw Exception(e.exception);
     } on FirebaseException catch (e) {
       "🔴 ${e.plugin.toUpperCase()} Message: ${e.message} code: ${e.code}".log();
       throw e.message!;
     } catch (e) {
-      '🔴 error in: crud_repos.dart with: $e type${e.runtimeType} when trying to fetch ${object.runtimeType} with id:$id'
-          .log();
+      '🔴 error in: crud_repos.dart with: $e type${e.runtimeType} when trying to fetch ${object.runtimeType} '.log();
       throw e.toString();
     } finally {
       'fetching command is finished after ${DateTime.now().difference(now).inMilliseconds} MS'.log();
