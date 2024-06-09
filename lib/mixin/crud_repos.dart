@@ -8,153 +8,117 @@ mixin CrudRepos {
   String get collection => '';
   bool get forTesting => false;
 
-  CollectionReference<Object?> _instructionCollection() => collection.collection(forTesting: forTesting);
-  //short cast of doc
-  Future<DocumentSnapshot<Object?>> docById({required docId}) => _instructionCollection().doc(docId).get();
+  CollectionReference<Object?> get _collectionRef => collection.collection(forTesting: forTesting);
+
+  Future<DocumentSnapshot<Object?>> docById({required String docId}) => _collectionRef.doc(docId).get();
 
   Future<void> add({required Map<String, dynamic> data}) async {
     final now = DateTime.now();
-    "⌛ adding of $data  in progress".log();
+    "⌛ Adding $data in progress".log();
+
     try {
-      if (data.containsKey('id')) {
-        assert(data['id'] is String, 'id should be a String');
-
-        ///find out whether exist
-
-        //add data
-
-        await _instructionCollection().doc(data['id']).set(data, SetOptions(merge: true));
-
-        '✅ $data  was added successfully '.log();
-      } else {
-        await _instructionCollection().doc().set(data, SetOptions(merge: true));
-      }
-    } catch (e) {
-      '🔴 error in: repos/crud_repos.dart with: $e error runtimeType: ${e.runtimeType}, when trying to add $data'.log();
-      throw e.toString();
+      final docRef = data.containsKey('id') ? _collectionRef.doc(data['id']) : _collectionRef.doc();
+      await docRef.set(data, SetOptions(merge: true));
+      '✅ ${data.containsKey('id') ? data['id'] : "New document"} was added successfully'.log();
+    } on Exception catch (e) {
+      _handleError(e, 'add', data);
     } finally {
-      if (forTesting) {
-        debugPrint('adding command is finished after ${DateTime.now().difference(now).inMilliseconds} MS');
-      }
-      'adding command is finished after ${DateTime.now().difference(now).inMilliseconds} MS'.log();
+      _logCompletionTime(now, 'Adding');
     }
   }
 
   @useResult
   Future<Map<String, dynamic>?> fetch({required String documentId}) async {
     final now = DateTime.now();
+    "⌛ Fetching document with ID $documentId in progress".log();
 
-    "⌛ fetching in progress".log();
     try {
-      DocumentSnapshot result = await _instructionCollection().doc(documentId).get();
-
-      if (result.exists) {
-        //return data
-        return result.data() as Map<String, dynamic>;
-      } else {
-        return null;
-      }
-    } on FirebaseException catch (e) {
-      "🔴 ${e.plugin.toUpperCase()} Message: ${e.message} code: ${e.code}".log();
-      throw e.message!;
-    } catch (e) {
-      '🔴 error in: lib/model/repos/crud_repos.dart with: $e type${e.runtimeType} when trying to fetch document with id $documentId '
-          .log();
-      throw e.toString();
+      final result = await docById(docId: documentId);
+      return result.exists ? result.data() as Map<String, dynamic>? : null;
+    } on Exception catch (e) {
+      _handleError(e, 'fetch', {'documentId': documentId});
+      return null; // This line is never reached because `_handleError` throws.
     } finally {
-      'fetching command is finished after ${DateTime.now().difference(now).inMilliseconds} MS'.log();
+      _logCompletionTime(now, 'Fetching');
     }
   }
 
-  Future<void> delete({required documentID}) async {
+  Future<void> delete({required String documentID}) async {
     final now = DateTime.now();
-    "⌛ deleting of document with id equal to $documentID  in progress".log();
-    try {
-      await _instructionCollection().doc(documentID).delete();
+    "⌛ Deleting document with ID $documentID in progress".log();
 
-      '✅ document with id equal to:  $documentID  was deleted successfully '.log();
-    } on FirebaseException catch (e) {
-      "🔴 ${e.plugin.toUpperCase()} Message: ${e.message} code: ${e.code}".log();
-      throw Exception(e.message!);
-    } catch (e) {
-      '🔴 error in: lib/model/repos/crud_repos.dart with: $e type${e.runtimeType} when trying to delete document with id equal to: ${documentID}'
-          .log();
-      throw Exception(e.toString());
+    try {
+      await _collectionRef.doc(documentID).delete();
+      '✅ Document with ID $documentID was deleted successfully'.log();
+    } on Exception catch (e) {
+      _handleError(e, 'delete', {'documentID': documentID});
     } finally {
-      'deleting command is finished after ${DateTime.now().difference(now).inMilliseconds} MS'.log();
+      _logCompletionTime(now, 'Deleting');
     }
   }
 
   Future<void> updateData({required Map<String, dynamic> data, String? documentId}) async {
     final now = DateTime.now();
-    "⌛ updating of $data  in progress".log();
-    final bool dataContainId = data.containsKey('id');
+    "⌛ Updating $data in progress".log();
+
     try {
-      if (dataContainId) {
-        assert(data['id'] is String, 'id should be a String');
-
-        ///find out whether exist
-
-        //add data
-
-        await _instructionCollection().doc(data['id']).update(
-              data,
-            );
-
-        '✅ ${data['id']}  was updated successfully'.log();
-      } else {
-        assert(!dataContainId && dataContainId != null, 'add a id to the document or add a an id to method param ');
-        await _instructionCollection().doc(documentId).update(
-              data,
-            );
+      final docRef = data.containsKey('id') ? _collectionRef.doc(data['id']) : _collectionRef.doc(documentId);
+      if (docRef == null) {
+        throw ArgumentError('Document ID is required if "id" is not present in data');
       }
-    } on FirebaseException catch (e) {
-      "🔴  ${e.plugin.toUpperCase()} Message: ${e.message} code: ${e.code}".log();
-      throw Exception(e.message);
-    } catch (e) {
-      '🔴 error in:crud_repos.dart with: $e type${e.runtimeType} when trying to update '.log();
-      throw Exception(e);
+      await docRef.update(data);
+      '✅ Document ${data['id'] ?? documentId} was updated successfully'.log();
+    } on Exception catch (e) {
+      _handleError(e, 'update', data);
     } finally {
-      'updating command is finished after ${DateTime.now().difference(now).inMilliseconds} MS'.log();
+      _logCompletionTime(now, 'Updating');
     }
   }
 
   @useResult
   Future<bool> isExist({required String documentId}) async {
     try {
-      DocumentSnapshot result = await docById(docId: documentId);
-
+      final result = await docById(docId: documentId);
       final exist = result.exists;
-      '✅ the document with id equal to: $documentId is Exist: $result'.log();
+      '✅ Document with ID $documentId exists: $exist'.log();
       return exist;
-    } on FirebaseException catch (e) {
-      "🔴 ${e.plugin.toUpperCase()} Message: ${e.message} code: ${e.code}".log();
-      throw e.message!;
-    } catch (e) {
-      '🔴 error in: crud_repos.dart with: $e type${e.runtimeType} when trying to check existence of document with id equal to $documentId'
-          .log();
-      rethrow;
+    } on Exception catch (e) {
+      _handleError(e, 'isExist', {'documentId': documentId});
+      return false; // This line is never reached because `_handleError` throws.
     }
   }
 
   @useResult
-  Future<List<dynamic>> fetchAll() async {
+  Future<List<Map<String, dynamic>>> fetchAll() async {
     final now = DateTime.now();
-    "⌛ fetching in progress".log();
+    "⌛ Fetching all documents in progress".log();
+
     try {
-      final collectionValue = await _instructionCollection().get();
-      final List<QueryDocumentSnapshot<Object?>> docs = collectionValue.docs;
-      docs.first.data()?.log();
-      final List<Map<String, dynamic>> result = docs.map((e) => e.data() as Map<String, dynamic>).toList();
-      return result;
-    } on FirebaseException catch (e) {
-      "🔴 ${e.plugin.toUpperCase()} Message: ${e.message} code: ${e.code}".log();
-      throw e.message!;
-    } catch (e) {
-      '🔴 error in: crud_repos.dart with: $e type${e.runtimeType} when trying to fetch  all data  '.log();
-      throw e.toString();
+      final collectionSnapshot = await _collectionRef.get();
+      final docs = collectionSnapshot.docs;
+      return docs.map((e) => e.data() as Map<String, dynamic>).toList();
+    } on Exception catch (e) {
+      _handleError(e, 'fetchAll', {});
+      return []; // This line is never reached because `_handleError` throws.
     } finally {
-      'fetching command is finished after ${DateTime.now().difference(now).inMilliseconds} MS'.log();
+      _logCompletionTime(now, 'Fetching all');
+    }
+  }
+
+  void _handleError(Exception e, String methodName, Map<String, dynamic> data) {
+    if (e is FirebaseException) {
+      "🔴 ${e.plugin.toUpperCase()} Message: ${e.message} Code: ${e.code}".log();
+    } else {
+      '🔴 Error in $methodName with data $data: $e (type ${e.runtimeType})'.log();
+    }
+    throw e;
+  }
+
+  void _logCompletionTime(DateTime startTime, String operation) {
+    final duration = DateTime.now().difference(startTime).inMilliseconds;
+    '$operation command finished in $duration ms'.log();
+    if (forTesting) {
+      debugPrint('$operation command finished in $duration ms');
     }
   }
 }
