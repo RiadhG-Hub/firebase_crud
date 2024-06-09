@@ -21,7 +21,7 @@ void main() {
     tearDownAll(() {});
     test('add data test', () async {
       expect(
-        () async => await dataSources.add(),
+        () async => await dataSources.add(data: {}),
         isA<void>(),
       );
     });
