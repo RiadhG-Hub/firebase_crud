@@ -43,7 +43,7 @@ mixin CrudRepos {
   ///
   /// Returns a [Map<String, dynamic>?] representing the document data, or `null` if the document does not exist.
   @useResult
-  Future<Map<String, dynamic>?> fetch({required String documentId}) async {
+  Future<dynamic> fetch({required String documentId}) async {
     final now = DateTime.now();
     "⌛ Fetching document with ID $documentId in progress".log();
 
@@ -112,7 +112,7 @@ mixin CrudRepos {
   ///
   /// Returns a [List<Map<String, dynamic>>] containing all documents data.
   @useResult
-  Future<List<Map<String, dynamic>>> fetchAll() async {
+  Future<List<dynamic>> fetchAll() async {
     final now = DateTime.now();
     "⌛ Fetching all documents in progress".log();
 
