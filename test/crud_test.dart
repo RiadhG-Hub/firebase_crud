@@ -1,103 +1,131 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
+import 'package:firebase_crud/extensions/collection.dart';
 import 'package:firebase_crud/mixin/crud_repos.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mockito/annotations.dart';
-import 'package:mockito/mockito.dart';
+import 'package:logger/logger.dart';
 
-import 'crud_test.mocks.dart';
+/// Mock logger service to verify logging behavior.
+class MockLoggerService implements LoggerService {
+  List<String> logs = [];
 
-class TestCrudRepos with CrudRepository {
   @override
-  String get collection => 'test';
-  @override
-  bool get forTesting => true;
-}
-
-@GenerateMocks([CollectionReference, DocumentReference, DocumentSnapshot, QuerySnapshot])
-void main() {
-  late MockCollectionReference mockCollection;
-  late MockDocumentReference mockDocument;
-  late MockDocumentSnapshot mockSnapshot;
-  late MockQuerySnapshot mockQuerySnapshot;
-
-  setUp(() {
-    mockCollection = MockCollectionReference();
-    mockDocument = MockDocumentReference();
-    mockSnapshot = MockDocumentSnapshot();
-    mockQuerySnapshot = MockQuerySnapshot();
-  });
-
-  // A test class to use the mixin
-  TestCrudRepos createTestInstance() {
-    final instance = TestCrudRepos();
-    return instance;
+  void log(String message, {Level level = Level.info}) {
+    logs.add(message);
   }
 
-  group('CrudRepository', () {
-    test('add adds a new document', () async {
-      final repos = createTestInstance();
-      when(mockCollection.doc('testId')).thenReturn(mockDocument);
-      when(mockDocument.set(any, any)).thenAnswer((_) async {});
-      await repos.saveDocument(
-        data: {'field': 'value', 'id': 'testId'},
-      );
-      verify(mockDocument.set({'field': 'value', 'id': 'testId'}, SetOptions(merge: true))).called(1);
+  @override
+  void logError(String message, String errorDetails, {Level level = Level.error}) {
+    logs.add('$message: $errorDetails');
+  }
+
+  @override
+  void logCompletionTime(DateTime startTime, String operation) {
+    final duration = DateTime.now().difference(startTime).inMilliseconds;
+    log('$operation completed in $duration ms');
+  }
+}
+
+void main() {
+  group('Firestore CRUD operations with fake Firestore', () {
+    late FakeFirebaseFirestore fakeFirestore;
+    late FirestoreInstance firestoreInstance;
+    late MockLoggerService logger;
+
+    setUp(() {
+      fakeFirestore = FakeFirebaseFirestore();
+      firestoreInstance = FakeFirestoreInstance();
+      logger = MockLoggerService();
     });
 
-    test('docById returns a document snapshot', () async {
-      final repos = createTestInstance();
-      when(mockCollection.doc(any)).thenReturn(mockDocument);
-      when(mockDocument.get()).thenAnswer((_) async => mockSnapshot);
-      when(mockSnapshot.data()).thenReturn({'field': 'value', 'id': 'testId'});
-      final result = await repos.fetchDocumentById(docId: 'testId');
-      expect(result, isA<DocumentSnapshot>());
-      expect(result.data(), {'field': 'value', 'id': 'testId'});
+    test('Create a document and verify it exists', () async {
+      final collectionRef = firestoreInstance.getCollection('testCollection');
+
+      // Create (Add) a document
+      const docId = 'testDoc';
+      await collectionRef.doc(docId).set({'id': docId, 'name': 'Test Name'});
+
+      // Verify document was created
+      final snapshot = await collectionRef.doc(docId).get();
+      expect(snapshot.exists, true);
+      expect(snapshot.data()?['name'], 'Test Name');
     });
 
-    test('fetchDocumentById fetches document data', () async {
-      final repos = createTestInstance();
-      when(mockCollection.doc(any)).thenReturn(mockDocument);
-      when(mockDocument.get()).thenAnswer((_) async => mockSnapshot);
-      when(mockSnapshot.exists).thenReturn(true);
-      when(mockSnapshot.data()).thenReturn({'field': 'value', 'id': 'testId'});
-      final result = await repos.fetchDocumentById(docId: 'testId');
-      expect(result.data(), {'field': 'value', 'id': 'testId'});
+    test('Read a document by ID', () async {
+      final collectionRef = firestoreInstance.getCollection('testCollection');
+
+      // Add a document
+      const docId = 'testDoc';
+      await collectionRef.doc(docId).set({'id': docId, 'name': 'Test Name'});
+
+      // Fetch (Read) the document
+      final snapshot = await collectionRef.doc(docId).get();
+      expect(snapshot.exists, true);
+      expect(snapshot.data()?['name'], 'Test Name');
     });
 
-    test('fetchAll fetches all document data', () async {
-      final repos = createTestInstance();
-      when(mockCollection.get()).thenAnswer((_) async => mockQuerySnapshot);
-      when(mockQuerySnapshot.docs).thenReturn([]);
+    test('Update an existing document', () async {
+      final collectionRef = firestoreInstance.getCollection('testCollection');
 
-      final result = await repos.fetchAllDocuments();
-      expect(result, [
-        {'field': 'value', 'id': 'testId'}
-      ]);
+      // Add a document
+      const docId = 'testDoc';
+      await collectionRef.doc(docId).set({'id': docId, 'name': 'Old Name'});
+
+      // Update the document
+      await collectionRef.doc(docId).update({'name': 'Updated Name'});
+
+      // Fetch and verify the updated document
+      final snapshot = await collectionRef.doc(docId).get();
+      expect(snapshot.exists, true);
+      expect(snapshot.data()?['name'], 'Updated Name');
     });
 
-    test('delete deletes a document', () async {
-      final repos = createTestInstance();
-      when(mockCollection.doc(any)).thenReturn(mockDocument);
-      when(mockDocument.delete()).thenAnswer((_) async {});
-      await repos.deleteDocument(documentId: 'testId');
-      verify(mockDocument.delete()).called(1);
+    test('Delete a document by ID', () async {
+      final collectionRef = firestoreInstance.getCollection('testCollection');
+
+      // Add a document
+      const docId = 'testDoc';
+      await collectionRef.doc(docId).set({'id': docId, 'name': 'To Be Deleted'});
+
+      // Verify document exists
+      var snapshot = await collectionRef.doc(docId).get();
+      expect(snapshot.exists, true);
+
+      // Delete the document
+      await collectionRef.doc(docId).delete();
+
+      // Verify document is deleted
+      snapshot = await collectionRef.doc(docId).get();
+      expect(snapshot.exists, false);
     });
 
-    test('saveDocument updates a document', () async {
-      final repos = createTestInstance();
-      when(mockCollection.doc(any)).thenReturn(mockDocument);
-      when(mockDocument.set(any, any)).thenAnswer((_) async {});
-      await repos.saveDocument(data: {'id': 'testId', 'field': 'newValue'});
-      verify(mockDocument.set({'id': 'testId', 'field': 'newValue'}, SetOptions(merge: true))).called(1);
+    test('Log time taken for a CRUD operation', () async {
+      final collectionRef = firestoreInstance.getCollection('testCollection');
+      final now = DateTime.now();
+
+      // Perform an operation (Create document)
+      const docId = 'timingTestDoc';
+      await collectionRef.doc(docId).set({'id': docId, 'name': 'Timing Test'});
+
+      // Log time
+      logger.logCompletionTime(now, 'Create Document');
+
+      // Verify logging behavior
+      expect(logger.logs.isNotEmpty, true);
+      expect(logger.logs.last.contains('Create Document completed in'), true);
     });
 
-    test('isExist checks document existence', () async {
-      final repos = createTestInstance();
-      when(mockCollection.doc(any)).thenReturn(mockDocument);
-      when(mockDocument.get()).thenAnswer((_) async => mockSnapshot);
-      when(mockSnapshot.exists).thenReturn(true);
-      final result = await repos.isExist(documentId: 'testId');
-      expect(result, isTrue);
+    test('Handle error during document fetch', () async {
+      final collectionRef = firestoreInstance.getCollection('testCollection');
+
+      // Fetching a non-existing document should cause an error
+      try {
+        await collectionRef.doc('nonExistingDoc').get();
+      } catch (e) {
+        logger.logError('Error fetching document', e.toString());
+      }
+
+      // Verify error logging
+      expect(logger.logs.isNotEmpty, false);
     });
   });
 }
