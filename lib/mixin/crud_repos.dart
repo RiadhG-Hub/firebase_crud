@@ -1,153 +1,136 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_crud/extensions/collection.dart';
-import 'package:firebase_crud/mixin/log.dart';
-import 'package:meta/meta.dart';
+import 'package:logger/logger.dart';
 
-/// A mixin providing CRUD operations for a Firestore collection.
-mixin CrudRepos {
+/// A mixin providing CRUD operations for a Firestore collection with optional logging and enhanced error tracking.
+mixin class CrudRepository {
   /// The name of the collection in Firestore.
   String get collection => '';
 
   /// Flag indicating whether the operations are for testing purposes.
   bool get forTesting => false;
 
+  /// Optional logger instance for logging operations.
+  Logger? get logger => null;
+
+  /// Flag indicating whether logging is enabled.
+  bool get enableLogging => false;
+
   /// Gets the reference to the Firestore collection.
   CollectionReference<Object?> get _collectionRef => collection.collection(forTesting: forTesting);
 
-  /// Fetches a document by its ID.
-  ///
-  /// Returns a [DocumentSnapshot] of the document with the given [docId].
-  Future<DocumentSnapshot<Object?>> docById({required String docId}) => _collectionRef.doc(docId).get();
+  /// Logs a message if logging is enabled.
+  void _log(String message, {Level level = Level.info}) {
+    if (enableLogging && logger != null) {
+      logger!.log(level, message);
+    }
+  }
 
-  /// Adds a new document or updates an existing document in the collection.
-  ///
-  /// If the [data] contains an 'id', it updates the document with that ID.
-  /// Otherwise, it creates a new document.
-  Future<void> add({required Map<String, dynamic> data}) async {
+  /// Logs the error details with enhanced context for better debugging.
+  void _handleError(dynamic e, String methodName, Map<String, dynamic> data) {
+    if (e is FirebaseException) {
+      _log('🔴 FirebaseError in $methodName with data $data: ${e.message}', level: Level.error);
+      _log('Error details: code = ${e.code}, message = ${e.message}, plugin = ${e.plugin}', level: Level.error);
+    } else {
+      _log('🔴 Error in $methodName with data $data: $e (type ${e.runtimeType})', level: Level.error);
+    }
+  }
+
+  /// Logs the time taken for an operation.
+  void _logCompletionTime(DateTime startTime, String operation) {
+    final duration = DateTime.now().difference(startTime).inMilliseconds;
+    _log('$operation completed in $duration ms');
+  }
+
+  /// Fetches a document by its ID.
+  Future<DocumentSnapshot<Object?>> fetchDocumentById({required String docId}) async {
     final now = DateTime.now();
-    "⌛ Adding $data in progress".log();
+    _log("⌛ Fetching document with ID $docId in progress");
+
+    try {
+      final result = await _collectionRef.doc(docId).get();
+      return result;
+    } catch (e) {
+      _handleError(e, 'fetchDocumentById', {'docId': docId});
+      rethrow;
+    } finally {
+      _logCompletionTime(now, 'Fetching document');
+    }
+  }
+
+  /// Adds or updates a document.
+  Future<void> saveDocument({required Map<String, dynamic> data}) async {
+    final now = DateTime.now();
+    _log("⌛ Saving document: $data in progress");
 
     try {
       final docRef = data.containsKey('id') ? _collectionRef.doc(data['id']) : _collectionRef.doc();
       await docRef.set(data, SetOptions(merge: true));
-      '✅ ${data.containsKey('id') ? data['id'] : "New document"} was added successfully'.log();
-    } on Exception catch (e) {
-      _handleError(e, 'add', data);
+      _log('✅ Document ${data.containsKey('id') ? data['id'] : "New document"} saved successfully');
+    } catch (e) {
+      _handleError(e, 'saveDocument', data);
+      rethrow;
     } finally {
-      _logCompletionTime(now, 'Adding');
-    }
-  }
-
-  /// Fetches a document by its ID.
-  ///
-  /// Returns a [Map<String, dynamic>?] representing the document data, or `null` if the document does not exist.
-  @useResult
-  Future<dynamic> fetch({required String documentId}) async {
-    final now = DateTime.now();
-    "⌛ Fetching document with ID $documentId in progress".log();
-
-    try {
-      final result = await docById(docId: documentId);
-      return result.exists ? result.data() as Map<String, dynamic>? : null;
-    } on Exception catch (e) {
-      _handleError(e, 'fetch', {'documentId': documentId});
-      return null; // This line is never reached because `_handleError` throws.
-    } finally {
-      _logCompletionTime(now, 'Fetching');
-    }
-  }
-
-  /// Deletes a document by its ID.
-  Future<void> delete({required String documentID}) async {
-    final now = DateTime.now();
-    "⌛ Deleting document with ID $documentID in progress".log();
-
-    try {
-      await _collectionRef.doc(documentID).delete();
-      '✅ Document with ID $documentID was deleted successfully'.log();
-    } on Exception catch (e) {
-      _handleError(e, 'delete', {'documentID': documentID});
-    } finally {
-      _logCompletionTime(now, 'Deleting');
-    }
-  }
-
-  /// Updates a document with the provided data.
-  ///
-  /// If the [data] contains an 'id', it updates the document with that ID.
-  /// Otherwise, it updates the document with the provided [documentId].
-  Future<void> updateData({required Map<String, dynamic> data, String? documentId}) async {
-    final now = DateTime.now();
-    "⌛ Updating $data in progress".log();
-
-    try {
-      final docRef = data.containsKey('id') ? _collectionRef.doc(data['id']) : _collectionRef.doc(documentId);
-      await docRef.update(data);
-      '✅ Document ${data['id'] ?? documentId} was updated successfully'.log();
-    } on Exception catch (e) {
-      _handleError(e, 'update', data);
-    } finally {
-      _logCompletionTime(now, 'Updating');
-    }
-  }
-
-  /// Checks if a document exists by its ID.
-  ///
-  /// Returns `true` if the document exists, otherwise `false`.
-  @useResult
-  Future<bool> isExist({required String documentId}) async {
-    try {
-      final result = await docById(docId: documentId);
-      final exist = result.exists;
-      '✅ Document with ID $documentId exists: $exist'.log();
-      return exist;
-    } on Exception catch (e) {
-      _handleError(e, 'isExist', {'documentId': documentId});
-      return false; // This line is never reached because `_handleError` throws.
+      _logCompletionTime(now, 'Saving document');
     }
   }
 
   /// Fetches all documents in the collection.
-  ///
-  /// Returns a [List<Map<String, dynamic>>] containing all documents data.
-  @useResult
-  Future<List<dynamic>> fetchAll() async {
+  Future<List<Map<String, dynamic>>> fetchAllDocuments() async {
     final now = DateTime.now();
-    "⌛ Fetching all documents in progress".log();
+    _log("⌛ Fetching all documents in progress");
 
     try {
       final collectionSnapshot = await _collectionRef.get();
-      final docs = collectionSnapshot.docs;
-      return docs.map((e) => e.data() as Map<String, dynamic>).toList();
-    } on Exception catch (e) {
-      _handleError(e, 'fetchAll', {});
-      return []; // This line is never reached because `_handleError` throws.
+      return collectionSnapshot.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
+    } catch (e) {
+      _handleError(e, 'fetchAllDocuments', {});
+      rethrow;
     } finally {
-      _logCompletionTime(now, 'Fetching all');
+      _logCompletionTime(now, 'Fetching all documents');
     }
   }
 
-  /// Handles errors by logging and rethrowing them.
-  ///
-  /// If the error is a [FirebaseException], logs its details.
-  /// Otherwise, logs the error type and data.
-  void _handleError(Exception e, String methodName, Map<String, dynamic> data) {
-    if (e is FirebaseException) {
-      print("🔴 ${e.plugin.toUpperCase()} Message: ${e.message} Code: ${e.code}");
-    } else {
-      print('🔴 Error in $methodName with data $data: $e (type ${e.runtimeType})');
+  /// Deletes a document by its ID.
+  Future<void> deleteDocument({required String documentId}) async {
+    final now = DateTime.now();
+    _log("⌛ Deleting document with ID $documentId in progress");
+
+    try {
+      await _collectionRef.doc(documentId).delete();
+      _log('✅ Document with ID $documentId deleted successfully');
+    } catch (e) {
+      _handleError(e, 'deleteDocument', {'documentId': documentId});
+      rethrow;
+    } finally {
+      _logCompletionTime(now, 'Deleting document');
     }
-    throw e;
   }
 
-  /// Logs the completion time of an operation.
-  ///
-  /// Logs the duration of the operation in milliseconds.
-  void _logCompletionTime(DateTime startTime, String operation) {
-    final duration = DateTime.now().difference(startTime).inMilliseconds;
-    print('$operation command finished in $duration ms');
-    if (forTesting) {
-      print('$operation command finished in $duration ms');
+  /// Deprecated methods for backward compatibility.
+
+  @Deprecated('Use fetchDocumentById instead')
+  Future<DocumentSnapshot<Object?>> docById({required String docId}) => fetchDocumentById(docId: docId);
+
+  @Deprecated('Use saveDocument instead')
+  Future<void> add({required Map<String, dynamic> data}) => saveDocument(data: data);
+
+  @Deprecated('Use fetchAllDocuments instead')
+  Future<List<dynamic>> fetchAll() => fetchAllDocuments();
+
+  @Deprecated('Use deleteDocument instead')
+  Future<void> delete({required String documentID}) => deleteDocument(documentId: documentID);
+
+  @Deprecated('Manually check document existence using fetchDocumentById or other methods')
+  Future<bool> isExist({required String documentId}) async {
+    try {
+      final result = await fetchDocumentById(docId: documentId);
+      final exist = result.exists;
+      _log('✅ Document with ID $documentId exists: $exist');
+      return exist;
+    } catch (e) {
+      _handleError(e, 'isExist', {'documentId': documentId});
+      rethrow;
     }
   }
 }

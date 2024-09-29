@@ -6,86 +6,89 @@ import 'package:mockito/mockito.dart';
 
 import 'crud_test.mocks.dart';
 
-class TestCrudRepos with CrudRepos {
+class TestCrudRepos with CrudRepository {
   @override
-  String collection = 'test';
+  String get collection => 'test';
   @override
-  bool forTesting = true;
+  bool get forTesting => true;
 }
 
-@GenerateMocks([CollectionReference, DocumentReference, DocumentSnapshot])
+@GenerateMocks([CollectionReference, DocumentReference, DocumentSnapshot, QuerySnapshot])
 void main() {
   late MockCollectionReference mockCollection;
   late MockDocumentReference mockDocument;
   late MockDocumentSnapshot mockSnapshot;
+  late MockQuerySnapshot mockQuerySnapshot;
 
   setUp(() {
     mockCollection = MockCollectionReference();
     mockDocument = MockDocumentReference();
     mockSnapshot = MockDocumentSnapshot();
+    mockQuerySnapshot = MockQuerySnapshot();
   });
 
   // A test class to use the mixin
-
   TestCrudRepos createTestInstance() {
     final instance = TestCrudRepos();
-    // Override the collection getter to return the mock
-    instance.collection = 'test';
     return instance;
   }
 
-  group('CrudRepos', () {
+  group('CrudRepository', () {
     test('add adds a new document', () async {
       final repos = createTestInstance();
-      //when(mockCollection.doc('testId')).thenReturn(mockDocument);
-      //when(mockDocument.set(any, any)).thenAnswer((_) async {});
-      await repos.add(
+      when(mockCollection.doc('testId')).thenReturn(mockDocument);
+      when(mockDocument.set(any, any)).thenAnswer((_) async {});
+      await repos.saveDocument(
         data: {'field': 'value', 'id': 'testId'},
       );
+      verify(mockDocument.set({'field': 'value', 'id': 'testId'}, SetOptions(merge: true))).called(1);
     });
 
     test('docById returns a document snapshot', () async {
       final repos = createTestInstance();
-      //when(mockCollection.doc(any)).thenReturn(mockDocument);
-      //when(mockDocument.get()).thenAnswer((_) async => mockSnapshot);
+      when(mockCollection.doc(any)).thenReturn(mockDocument);
+      when(mockDocument.get()).thenAnswer((_) async => mockSnapshot);
       when(mockSnapshot.data()).thenReturn({'field': 'value', 'id': 'testId'});
-      final result = await repos.docById(docId: 'testId');
+      final result = await repos.fetchDocumentById(docId: 'testId');
       expect(result, isA<DocumentSnapshot>());
-      print(result.data());
+      expect(result.data(), {'field': 'value', 'id': 'testId'});
     });
 
-    test('fetch fetches document data', () async {
+    test('fetchDocumentById fetches document data', () async {
       final repos = createTestInstance();
       when(mockCollection.doc(any)).thenReturn(mockDocument);
       when(mockDocument.get()).thenAnswer((_) async => mockSnapshot);
       when(mockSnapshot.exists).thenReturn(true);
       when(mockSnapshot.data()).thenReturn({'field': 'value', 'id': 'testId'});
-      final result = await repos.fetch(documentId: 'testId');
-      expect(result, {'field': 'value', 'id': 'testId'});
+      final result = await repos.fetchDocumentById(docId: 'testId');
+      expect(result.data(), {'field': 'value', 'id': 'testId'});
     });
 
-    test('fetch all document data', () async {
+    test('fetchAll fetches all document data', () async {
       final repos = createTestInstance();
-      when(mockCollection.doc(any)).thenReturn(mockDocument);
-      when(mockDocument.get()).thenAnswer((_) async => mockSnapshot);
-      when(mockSnapshot.exists).thenReturn(true);
-      when(mockSnapshot.data()).thenReturn({'field': 'value', 'id': 'testId'});
-      final result = await repos.fetchAll();
-      expect(result, {'field': 'value', 'id': 'testId'});
+      when(mockCollection.get()).thenAnswer((_) async => mockQuerySnapshot);
+      when(mockQuerySnapshot.docs).thenReturn([]);
+
+      final result = await repos.fetchAllDocuments();
+      expect(result, [
+        {'field': 'value', 'id': 'testId'}
+      ]);
     });
 
     test('delete deletes a document', () async {
       final repos = createTestInstance();
       when(mockCollection.doc(any)).thenReturn(mockDocument);
       when(mockDocument.delete()).thenAnswer((_) async {});
-      await repos.delete(documentID: 'testId');
+      await repos.deleteDocument(documentId: 'testId');
+      verify(mockDocument.delete()).called(1);
     });
 
-    test('updateData updates a document', () async {
+    test('saveDocument updates a document', () async {
       final repos = createTestInstance();
       when(mockCollection.doc(any)).thenReturn(mockDocument);
-      when(mockDocument.update(any)).thenAnswer((_) async {});
-      await repos.updateData(data: {'id': 'testId', 'field': 'newValue'});
+      when(mockDocument.set(any, any)).thenAnswer((_) async {});
+      await repos.saveDocument(data: {'id': 'testId', 'field': 'newValue'});
+      verify(mockDocument.set({'id': 'testId', 'field': 'newValue'}, SetOptions(merge: true))).called(1);
     });
 
     test('isExist checks document existence', () async {
