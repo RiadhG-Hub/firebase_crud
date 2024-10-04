@@ -1,6 +1,6 @@
 name: firebase_crud
 description: "A firebase crud facilitator."
-version: 0.0.5
+version: 0.0.6
 homepage: https://github.com/riadhrahma/firebase_crud
 
 environment:
