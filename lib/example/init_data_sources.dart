@@ -1,15 +1,18 @@
 import 'package:firebase_crud/mixin/crud_repos.dart';
+import 'package:firebase_crud/mixin/firestore_write_service.dart';
+import 'package:firebase_crud/mixin/logger_service.dart';
 import 'package:logger/logger.dart';
 
-class InitDataSources with CrudRepository {
+class InitDataSources with FirestoreWriteRepository {
   @override
-  String collection = 'buyer';
-  @override
-  bool forTesting = true;
+  // TODO: implement firestoreWriteService
+  FirestoreWriteService get firestoreWriteService => FirestoreWriteServiceImpl();
 
   @override
-  FirestoreService get firestoreService => FirestoreServiceImpl();
+  // TODO: implement loggerService
+  LoggerService? get loggerService => LoggerServiceImpl(Logger(), true);
 
   @override
-  LoggerService? get loggerService => throw LoggerServiceImpl(Logger(), true);
+  // TODO: implement collection
+  String get collection => "collection_name";
 }

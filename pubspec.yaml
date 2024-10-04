@@ -1,7 +1,7 @@
 name: firebase_crud
 description: "A firebase crud facilitator."
 version: 0.0.1
-homepage: '/'
+homepage: https://github.com/riadhrahma/firebase_crud
 
 environment:
   sdk: '>=3.3.4 <4.0.0'
@@ -10,6 +10,7 @@ environment:
 dependencies:
   cloud_firestore: ^4.17.0
   fake_cloud_firestore: ^2.5.1
+  firebase_auth: ^4.20.0
   firebase_core: ^2.30.0
   flutter:
     sdk: flutter
