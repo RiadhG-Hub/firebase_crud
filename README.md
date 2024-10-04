@@ -1,116 +1,166 @@
 # Firebase CRUD with Logging - Dart Package
 
-## Overview
+#This package provides a set of reusable mixins for performing Firestore operations and authentication checks in a clean, modular way. The mixins are designed to follow the SOLID principles, giving developers the flexibility to choose only the functionality they need.
 
-This package provides a reusable mixin to handle CRUD (Create, Read, Update, Delete) operations for Firestore collections. It integrates logging functionality via the `Logger` package, allowing developers to log operations and errors for better tracking and debugging. The package is designed with flexibility, allowing the use of different Firestore collections, and provides support for optional testing environments.
+Features
+Firestore Read Operations: Fetch individual documents or retrieve all documents from a collection.
+Firestore Write Operations: Save or delete documents within a Firestore collection.
+Authentication: Check if a user is authenticated before performing operations.
+Logging: Optional logging of operations, errors, and completion times for better visibility.
+Installation
+Add the following to your pubspec.yaml:
 
-## Features
-
-- **CRUD Operations**: Easily perform Firestore document operations such as fetching, saving, deleting, and retrieving all documents from a collection.
-- **Logging Support**: Log actions, errors, and completion times using the `Logger` package for detailed operation insights.
-- **Reusable Mixin**: The `CrudRepository` mixin allows for easy integration into any class needing Firestore CRUD functionality.
-- **Firestore Service Abstraction**: Decoupled Firestore operations through `FirestoreService` and `FirestoreServiceImpl`, which handle the core Firestore interaction logic.
-- **Testing Support**: Simplify Firestore operations in test environments using the `forTesting` flag.
-
-## Getting Started
-
-### Installation
-
-Add the following dependencies to your `pubspec.yaml` file:
-
-```yaml
+yaml
+Copy code
 dependencies:
-  cloud_firestore: ^3.0.0
-  logger: ^1.0.0
-  firebase_crud: ^1.0.0
-```
+cloud_firestore: ^4.1.0
+logger: ^1.2.0
+Usage
+1. Firestore Read Operations
+   The FirestoreReadRepository mixin provides read operations for fetching a document by ID and fetching all documents from a collection.
 
-### Usage
+Example
+dart
+Copy code
+import 'package:your_package/firestore_mixin.dart';
 
-1. **Import the necessary libraries:**
+class UserReadRepository with FirestoreReadRepository {
+@override
+String get collection => 'users';
 
-```dart
-import 'package:firebase_crud/mixin/crud_repos.dart';
-import 'package:logger/logger.dart';
-```
+@override
+FirestoreReadService get firestoreReadService => FirestoreServiceImpl();
 
-2. **Create a class that implements the CRUD mixin:**
-
-```dart
-class InitDataSources with CrudRepository {
-  @override
-  String collection = 'buyer';
-  
-  @override
-  bool forTesting = true;
-
-  @override
-  FirestoreService get firestoreService => FirestoreServiceImpl();
-
-  @override
-  LoggerService? get loggerService => LoggerServiceImpl(Logger(), true);
+@override
+LoggerService? get loggerService => LoggerServiceImpl(Logger(), true);
 }
-```
 
-3. **Perform CRUD operations:**
+void fetchUserById(String userId) async {
+final userRepository = UserReadRepository();
 
-```dart
-final dataSource = InitDataSources();
+try {
+final userDocument = await userRepository.fetchDocumentById(docId: userId);
+if (userDocument.exists) {
+final userData = userDocument.data();
+print('User data: $userData');
+} else {
+print('User not found');
+}
+} catch (e) {
+print('Error fetching user: $e');
+}
+}
+2. Firestore Write Operations
+   The FirestoreWriteRepository mixin provides write operations to save and delete documents in a Firestore collection.
 
-// Fetch a document by ID
-final doc = await dataSource.fetchDocumentById(docId: '12345');
+Example
+dart
+Copy code
+class UserWriteRepository with FirestoreWriteRepository {
+@override
+String get collection => 'users';
 
-// Save a new document
-await dataSource.saveDocument(data: {
-  'name': 'John Doe',
-  'email': 'johndoe@example.com'
-});
+@override
+FirestoreWriteService get firestoreWriteService => FirestoreWriteServiceImpl();
 
-// Fetch all documents
-final documents = await dataSource.fetchAllDocuments();
+@override
+LoggerService? get loggerService => LoggerServiceImpl(Logger(), true);
+}
 
-// Delete a document by ID
-await dataSource.deleteDocument(documentId: '12345');
-```
+void saveUser(Map<String, dynamic> userData) async {
+final userRepository = UserWriteRepository();
 
-### Customization
+try {
+await userRepository.saveDocument(data: userData);
+print('User saved successfully');
+} catch (e) {
+print('Error saving user: $e');
+}
+}
+3. Authentication
+   The AuthRepository mixin provides an isAuthenticated check using the AuthService abstraction. This can be combined with other mixins to ensure that only authenticated users can perform certain operations.
 
-- **Firestore Collection**: The collection to be used is set by overriding the `collection` property.
-- **Testing Mode**: The `forTesting` flag can be set to `true` to use a test environment for Firestore operations.
-- **Logger Service**: You can choose whether to enable logging and customize the log messages by overriding the `loggerService`.
+Example
+dart
+Copy code
+class AuthenticatedUserRepository with FirestoreReadRepository, FirestoreWriteRepository, AuthRepository {
+@override
+String get collection => 'users';
 
-## Logging Features
+@override
+FirestoreReadService get firestoreReadService => FirestoreServiceImpl();
 
-The package provides three types of logging:
-1. **Standard Logs**: Informational logs about operations such as fetching or saving documents.
-2. **Error Logs**: Logs detailing any issues that occur during CRUD operations.
-3. **Completion Logs**: Logs that track the time taken to complete operations.
+@override
+FirestoreWriteService get firestoreWriteService => FirestoreWriteServiceImpl();
 
-### Example:
+@override
+AuthService get authService => FirebaseAuthService();
 
-```dart
-loggerService?.log("⌛ Fetching document in progress");
-loggerService?.logError("Error fetching document", e.toString());
-loggerService?.logCompletionTime(startTime, 'Fetching document');
-```
+@override
+LoggerService? get loggerService => LoggerServiceImpl(Logger(), true);
+}
 
-## FirestoreService
+void fetchUserIfAuthenticated(String userId) async {
+final userRepository = AuthenticatedUserRepository();
 
-This package abstracts the Firestore interactions via the `FirestoreService` interface and its implementation `FirestoreServiceImpl`. The core methods include:
-- `getCollectionReference()`: Retrieves the collection reference.
-- `fetchDocumentById()`: Fetches a document by its ID.
-- `saveDocument()`: Saves a new or existing document.
-- `fetchAllDocuments()`: Retrieves all documents in a collection.
-- `deleteDocument()`: Deletes a document by its ID.
+try {
+await userRepository.checkAuthenticated();
+final userDocument = await userRepository.fetchDocumentById(docId: userId);
+if (userDocument.exists) {
+final userData = userDocument.data();
+print('User data: $userData');
+} else {
+print('User not found');
+}
+} catch (e) {
+print('Error: $e');
+}
+}
+4. Combining Read, Write, and Auth
+   If you want to combine both read and write operations with authentication, you can create a repository that includes both FirestoreReadRepository, FirestoreWriteRepository, and AuthRepository.
 
-## LoggerService
+Example
+dart
+Copy code
+class FullUserRepository with FirestoreReadRepository, FirestoreWriteRepository, AuthRepository {
+@override
+String get collection => 'users';
 
-The `LoggerService` provides logging functionality using the `Logger` package. The `LoggerServiceImpl` logs information conditionally, based on the `_enableLogging` flag.
+@override
+FirestoreReadService get firestoreReadService => FirestoreServiceImpl();
 
-## Contributing
+@override
+FirestoreWriteService get firestoreWriteService => FirestoreWriteServiceImpl();
 
-Feel free to open issues or submit pull requests for any improvements or new features. We encourage collaboration!
+@override
+AuthService get authService => FirebaseAuthService();
 
-## License
+@override
+LoggerService? get loggerService => LoggerServiceImpl(Logger(), true);
+}
+Logging
+By providing a LoggerService, you can enable logging for any operation. You can log messages, errors, and completion times for operations like fetching or saving documents.
 
-This package is available under the MIT License.
+Example
+dart
+Copy code
+final loggerService = LoggerServiceImpl(Logger(), true); // Enable logging
+final userRepository = FullUserRepository();
+
+userRepository.loggerService?.log('Fetching all users...');
+Classes and Mixins
+Firestore Read Operations
+FirestoreReadService: Abstract class for read operations.
+FirestoreReadRepository: Mixin for fetching documents from Firestore.
+Firestore Write Operations
+FirestoreWriteService: Abstract class for write operations.
+FirestoreWriteRepository: Mixin for saving and deleting documents.
+Authentication
+AuthService: Abstract class for authentication.
+AuthRepository: Mixin for checking authentication.
+Logging
+LoggerService: Abstract class for logging operations.
+Conclusion
+This package offers a modular, reusable solution for handling Firestore operations and authentication in Dart and Flutter applications. By using mixins, developers can cleanly separate concerns and only include the functionality they need.
+
+Feel free to modify and extend the code according to your project requirements.
