@@ -1,4 +1,3 @@
-import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:firebase_crud/extensions/collection.dart';
 import 'package:firebase_crud/mixin/logger_service.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -14,7 +13,8 @@ class MockLoggerService implements LoggerService {
   }
 
   @override
-  void logError(String message, String errorDetails, {Level level = Level.error}) {
+  void logError(String message, String errorDetails,
+      {Level level = Level.error}) {
     logs.add('$message: $errorDetails');
   }
 
@@ -27,12 +27,10 @@ class MockLoggerService implements LoggerService {
 
 void main() {
   group('Firestore CRUD operations with fake Firestore', () {
-    late FakeFirebaseFirestore fakeFirestore;
     late FirestoreInstance firestoreInstance;
     late MockLoggerService logger;
 
     setUp(() {
-      fakeFirestore = FakeFirebaseFirestore();
       firestoreInstance = FakeFirestoreInstance();
       logger = MockLoggerService();
     });
@@ -84,7 +82,9 @@ void main() {
 
       // Add a document
       const docId = 'testDoc';
-      await collectionRef.doc(docId).set({'id': docId, 'name': 'To Be Deleted'});
+      await collectionRef
+          .doc(docId)
+          .set({'id': docId, 'name': 'To Be Deleted'});
 
       // Verify document exists
       var snapshot = await collectionRef.doc(docId).get();

@@ -11,7 +11,6 @@ import 'package:logger/logger.dart';
 /// mixins to perform CRUD operations on the Firestore database, specifically targeting the
 /// 'users' collection. It also integrates a logger service for logging operations and errors.
 class UserRepository with FirestoreReadRepository, FirestoreWriteRepository {
-
   /// Specifies the collection name in Firestore.
   @override
   String get collection => 'users';
@@ -22,7 +21,8 @@ class UserRepository with FirestoreReadRepository, FirestoreWriteRepository {
 
   /// Returns an instance of the FirestoreWriteService implementation.
   @override
-  FirestoreWriteService get firestoreWriteService => FirestoreWriteServiceImpl();
+  FirestoreWriteService get firestoreWriteService =>
+      FirestoreWriteServiceImpl();
 
   /// Returns an instance of the LoggerService implementation, enabling logging.
   @override
@@ -34,8 +34,10 @@ class UserRepository with FirestoreReadRepository, FirestoreWriteRepository {
   ///
   /// Returns a list of user data as a list of maps.
   Future<List<Map<String, dynamic>>> search() async {
-    final QuerySnapshot<Map<String, dynamic>> result =
-    await FirebaseFirestore.instance.collection(collection).where("id", whereIn: ["something"]).get();
+    final QuerySnapshot<Map<String, dynamic>> result = await FirebaseFirestore
+        .instance
+        .collection(collection)
+        .where("id", whereIn: ["something"]).get();
 
     // Maps the document snapshots to a list of maps containing the user data.
     return result.docs.map((element) => element.data()).toList();

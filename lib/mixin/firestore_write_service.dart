@@ -30,7 +30,6 @@ abstract class FirestoreWriteService {
 /// It uses FirebaseFirestore to interact with Firestore and perform write operations such as
 /// saving and deleting documents.
 class FirestoreWriteServiceImpl implements FirestoreWriteService {
-
   /// Saves a document to Firestore.
   ///
   /// This method checks if the provided data contains an 'id' field. If it does, it updates the existing
@@ -45,8 +44,12 @@ class FirestoreWriteServiceImpl implements FirestoreWriteService {
   Future<void> saveDocument(String collection, Map<String, dynamic> data) {
     // Determine if the document should be updated or created
     final docRef = data.containsKey('id')
-        ? FirebaseFirestore.instance.collection(collection).doc(data['id'])  // Update existing document
-        : FirebaseFirestore.instance.collection(collection).doc();           // Create a new document
+        ? FirebaseFirestore.instance
+            .collection(collection)
+            .doc(data['id']) // Update existing document
+        : FirebaseFirestore.instance
+            .collection(collection)
+            .doc(); // Create a new document
 
     // Save the document data, using merge to preserve existing fields if the document exists
     return docRef.set(data, SetOptions(merge: true));
@@ -63,6 +66,9 @@ class FirestoreWriteServiceImpl implements FirestoreWriteService {
   @override
   Future<void> deleteDocument(String collection, String documentId) {
     // Delete the document from the collection using its ID
-    return FirebaseFirestore.instance.collection(collection).doc(documentId).delete();
+    return FirebaseFirestore.instance
+        .collection(collection)
+        .doc(documentId)
+        .delete();
   }
 }

@@ -32,7 +32,7 @@ abstract class LoggerService {
 /// It utilizes the `Logger` package to log messages to the console or other outputs.
 /// It also includes a toggle to enable or disable logging.
 class LoggerServiceImpl implements LoggerService {
-  final Logger _logger;      // Logger instance for logging messages
+  final Logger _logger; // Logger instance for logging messages
   final bool _enableLogging; // Flag to enable/disable logging
 
   /// Constructor that initializes the logger and enables/disables logging based on [enableLogging].
@@ -48,7 +48,8 @@ class LoggerServiceImpl implements LoggerService {
   @override
   void log(String message, {Level level = Level.info}) {
     if (_enableLogging) {
-      _logger.log(level, message); // Logs the message using the provided log level
+      _logger.log(
+          level, message); // Logs the message using the provided log level
     }
   }
 
@@ -61,9 +62,11 @@ class LoggerServiceImpl implements LoggerService {
   /// [errorDetails]: Additional error details (e.g., exception message or stack trace).
   /// [level]: The log level for the error message (defaults to `Level.error`).
   @override
-  void logError(String message, String errorDetails, {Level level = Level.error}) {
+  void logError(String message, String errorDetails,
+      {Level level = Level.error}) {
     if (_enableLogging) {
-      _logger.log(level, "$message. Details: $errorDetails"); // Logs error message with additional details
+      _logger.log(level,
+          "$message. Details: $errorDetails"); // Logs error message with additional details
     }
   }
 

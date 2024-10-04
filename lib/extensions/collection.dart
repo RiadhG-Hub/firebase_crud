@@ -40,7 +40,8 @@ class FirestoreFactory {
 
 /// Extension on String to use the FirestoreFactory
 extension PathExtension on String {
-  CollectionReference<Map<String, dynamic>> collection({bool forTesting = false}) {
+  CollectionReference<Map<String, dynamic>> collection(
+      {bool forTesting = false}) {
     final firestore = FirestoreFactory(forTesting: forTesting).create();
     return firestore.getCollection(this);
   }

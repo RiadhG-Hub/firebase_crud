@@ -29,7 +29,6 @@ class FirebaseAuthService implements AuthService {
   /// Returns `true` if the user is authenticated, `false` otherwise.
   @override
   bool isAuthenticated() {
-
     // For example, you could check the FirebaseAuth.instance.currentUser
     // to determine if the user is logged in.
 
