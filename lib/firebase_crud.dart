@@ -1,7 +1,7 @@
 library firebase_crud;
 
-/// A Calculator.
-class Calculator {
-  /// Returns [value] plus 1.
-  int addOne(int value) => value + 1;
-}
+// Export all public APIs
+export 'package:firebase_crud/mixin/crud_repos.dart';
+export 'package:firebase_crud/exceptions/existence_exception.dart';
+export 'package:firebase_crud/extensions/collection.dart';
+export 'package:firebase_crud/mixin/log.dart';
